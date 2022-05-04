@@ -1,11 +1,15 @@
 use chrono::prelude::{DateTime, Local};
 use clap::Parser;
 use clipboard_master::{CallbackResult, ClipboardHandler, Master};
+use config::Config;
 use copypasta::{ClipboardContext, ClipboardProvider};
 use regex::Regex;
 use std::fs::File;
 use std::io;
 use std::io::Write;
+
+mod config;
+mod setup;
 
 #[derive(Parser, Debug)]
 struct Cli {
@@ -16,7 +20,8 @@ struct Handler;
 
 impl ClipboardHandler for Handler {
     fn on_clipboard_change(&mut self) -> CallbackResult {
-        check_credentials();
+        let config = config::read();
+        check_credentials(&config);
         CallbackResult::Next
     }
 
@@ -27,6 +32,14 @@ impl ClipboardHandler for Handler {
 }
 
 fn main() {
+    if !config::exists() {
+        setup::run();
+    }
+
+    run();
+}
+
+fn run() {
     let args = Cli::parse();
     match args {
         _listen => {
@@ -38,26 +51,25 @@ fn main() {
     };
 }
 
-fn check_credentials() {
-    //TODO get the neaddle from a config file
-    let needle = Some("");
+fn check_credentials(config: &Config) {
+    let aws_user_id = format!("[{}]", &config.aws_user_id);
 
     let credentials = get_credentials_from_clipboard();
 
     let first_line = credentials.lines().next();
+    let needle = &aws_user_id[..];
 
-    if first_line == needle {
-        write_new_credentials(&credentials);
+    if first_line == Some(needle) {
+        write_new_credentials(config, &credentials);
     }
 }
 
-fn write_new_credentials(credentials: &str) {
+fn write_new_credentials(config: &Config, credentials: &str) {
     let mut f = File::create("~/.aws/credentials").expect("Unable to create file");
 
     let re = Regex::new(r"\[(.*?)\]").unwrap();
 
-    // TODO get the profile from a config file
-    let final_data = re.replace(credentials, "");
+    let final_data = re.replace(credentials, format!("[{}]", &config.aws_profile));
 
     f.write_all(final_data.as_bytes())
         .expect("Unable to write data");
