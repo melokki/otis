@@ -7,6 +7,7 @@ use regex::Regex;
 use std::fs::File;
 use std::io;
 use std::io::Write;
+extern crate dirs;
 
 mod config;
 mod setup;
@@ -65,7 +66,12 @@ fn check_credentials(config: &Config) {
 }
 
 fn write_new_credentials(config: &Config, credentials: &str) {
-    let mut f = File::create("~/.aws/credentials").expect("Unable to create file");
+    let home_dir = dirs::home_dir();
+    let mut credentials_file_path = home_dir.unwrap();
+    credentials_file_path.push(".aws");
+    credentials_file_path.push("credentials");
+
+    let mut f = File::create(credentials_file_path).expect("Unable to create file");
 
     let re = Regex::new(r"\[(.*?)\]").unwrap();
 
