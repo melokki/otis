@@ -10,6 +10,7 @@ pub struct Config {
     pub aws_profile: String,
 }
 const CONFIG_FILE_NAME: &str = "otis_config.json";
+
 pub fn read() -> Config {
     let contents = fs::read_to_string(CONFIG_FILE_NAME).expect("Could not read the config file");
 
